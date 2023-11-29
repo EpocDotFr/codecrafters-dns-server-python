@@ -1,11 +1,14 @@
 from socketserver import DatagramRequestHandler
 from app.server import DNSServer
+from app.message import Message
 
 
 class DNSHandler(DatagramRequestHandler):
     server: DNSServer
 
     def handle(self) -> None:
-        print(self.rfile.read(512))
+        message = Message.unserialize(self.rfile)
+
+        print(message)
 
         self.wfile.write(b'')
