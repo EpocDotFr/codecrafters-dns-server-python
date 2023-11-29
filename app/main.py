@@ -1,26 +1,14 @@
-import socket
+from app.handler import DNSHandler
+from app.server import DNSServer
 
 
-def main():
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!")
-
-    # Uncomment this block to pass the first stage
-    #
-    # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    # udp_socket.bind(("127.0.0.1", 2053))
-    #
-    # while True:
-    #     try:
-    #         buf, source = udp_socket.recvfrom(512)
-    #
-    #         response = b""
-    #
-    #         udp_socket.sendto(response, source)
-    #     except Exception as e:
-    #         print(f"Error receiving data: {e}")
-    #         break
+def main() -> None:
+    with DNSServer(('127.0.0.1', 2053), DNSHandler) as server:
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
