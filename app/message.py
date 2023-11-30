@@ -23,13 +23,13 @@ class HasStructMixin:
 class Header(HasStructMixin):
     packet_id: int
     query_response: bool
-    operation_code: Any # TODO
+    operation_code: int
     authoritative_answer: bool
     truncated_message: bool
     recursion_desired: bool
     recursion_available: bool
-    reserved: Any # TODO
-    response_code: Any # TODO
+    reserved: int
+    response_code: int
     question_count: int
     answer_count: int
     authority_count: int
@@ -58,13 +58,13 @@ class Header(HasStructMixin):
         return cls(
             packet_id=packet_id,
             query_response=bits[0] == '1',
-            operation_code=bits[1:4],
+            operation_code=int(bits[1:4], 2),
             authoritative_answer=bits[6] == '1',
             truncated_message=bits[7] == '1',
             recursion_desired=bits[8] == '1',
             recursion_available=bits[9] == '1',
-            reserved=bits[10:3],
-            response_code=bits[14:4],
+            reserved=int(bits[10:3], 2),
+            response_code=int(bits[14:4], 2),
             question_count=question_count,
             answer_count=answer_count,
             authority_count=authority_count,
