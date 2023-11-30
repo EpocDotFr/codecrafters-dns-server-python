@@ -11,6 +11,14 @@ class DNSHandler(DatagramRequestHandler):
 
         print('<', query)
 
+        questions = [
+            messages.Question(
+                domain_name=query.questions[0].domain_name,
+                record_type=query.questions[0].record_type,
+                record_class=query.questions[0].record_class
+            )
+        ]
+
         response = messages.Message(
             header=messages.Header(
                 packet_id=query.header.packet_id,
@@ -22,18 +30,12 @@ class DNSHandler(DatagramRequestHandler):
                 recursion_available=False,
                 reserved=0,
                 response_code=0,
-                question_count=0,
+                question_count=len(questions),
                 answer_count=0,
                 authority_count=0,
                 additional_count=0
             ),
-            questions=[
-                messages.Question(
-                    domain_name=query.questions[0].domain_name,
-                    record_type=query.questions[0].record_type,
-                    record_class=query.questions[0].record_class
-                )
-            ]
+            questions=questions
         )
 
         print('>', response)
