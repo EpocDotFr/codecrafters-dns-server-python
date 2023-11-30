@@ -26,7 +26,14 @@ class DNSHandler(DatagramRequestHandler):
                 answer_count=0,
                 authority_count=0,
                 additional_count=0
-            )
+            ),
+            questions=[
+                messages.Question(
+                    domain_name=query.questions[0].domain_name,
+                    record_type=query.questions[0].record_type,
+                    record_class=query.questions[0].record_class
+                )
+            ]
         )
 
         print('>', response)

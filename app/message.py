@@ -1,4 +1,4 @@
-from typing import BinaryIO, Tuple
+from typing import BinaryIO, Tuple, List
 from dataclasses import dataclass
 from enum import Enum
 import struct
@@ -42,8 +42,8 @@ class HasStructMixin:
         return struct.pack(f'>{self._format}', *data)
 
     @classmethod
-    def unpack(cls, data: bytes) -> Tuple:
-        return struct.unpack(f'>{cls._format}', data)
+    def unpack(cls, f: BinaryIO) -> Tuple:
+        return struct.unpack(f'>{cls._format}', f.read(cls.size()))
 
     @classmethod
     def size(cls) -> int:
@@ -93,7 +93,7 @@ class Header(HasStructMixin):
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
-        packet_id, bits, question_count, answer_count, authority_count, additional_count = cls.unpack(f.read(cls.size()))
+        packet_id, bits, question_count, answer_count, authority_count, additional_count = cls.unpack(f)
 
         bits = ''.join([format(b, '08b') for b in bits])
 
@@ -116,19 +116,47 @@ class Header(HasStructMixin):
 
 @dataclass
 class Question(HasStructMixin):
-    domain_name: Tuple[str]
+    domain_name: List[str]
     record_type: RecordType
     record_class: RecordClass
 
+    _format = 'HH'
+
     def serialize(self, f: BinaryIO) -> None:
-        pass
+        f.write(b''.join([
+            len(label).to_bytes(2) + label.encode() for label in self.domain_name
+        ]) + b'\x00')
+
+        f.write(self.pack(
+            self.record_type.value,
+            self.record_class.value
+        ))
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
+        domain_name = []
+
+        while True:
+            char = f.read(1)
+
+            if char == b'\x00':
+                break
+
+            label = f.read(
+                int.from_bytes(char, byteorder='big')
+            ).decode()
+
+            domain_name.append(label)
+
+        record_type, record_class = cls.unpack(f)
+
+        record_type = RecordType(record_type)
+        record_class = RecordClass(record_class)
+
         return cls(
-            domain_name=('',),
-            record_type=RecordType.NS,
-            record_class=RecordClass.IN
+            domain_name=domain_name,
+            record_type=record_type,
+            record_class=record_class
         )
 
 
@@ -165,16 +193,23 @@ class Additional(HasStructMixin):
 @dataclass
 class Message:
     header: Header
-    # question: Question
-    # answer: Answer
-    # authority: Authority
-    # additional: Additional
+    questions: List[Question]
+    # answers: List[Answer]
+    # authorities: List[Authority]
+    # additional: List[Additional]
 
     def serialize(self, f: BinaryIO) -> None:
         self.header.serialize(f)
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
+        header = Header.unserialize(f)
+
+        questions = [
+            Question.unserialize(f) for _ in range(header.question_count)
+        ]
+
         return cls(
-            header=Header.unserialize(f)
+            header=header,
+            questions=questions
         )
