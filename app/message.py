@@ -5,8 +5,8 @@ import struct
 
 
 class MessageType(Enum):
-    Query = '0'
-    Response = '1'
+    Q = '0'
+    R = '1'
 
 
 class RecordType(Enum):
@@ -194,7 +194,7 @@ class Additional(HasStructMixin):
 class Message:
     header: Header
     questions: List[Question]
-    # answers: List[Answer]
+    answers: List[Answer]
     # authorities: List[Authority]
     # additional: List[Additional]
 
@@ -214,7 +214,8 @@ class Message:
 
         return cls(
             header=header,
-            questions=questions
+            questions=questions,
+            answers=[] # TODO
         )
 
     def __setattr__(self, name, value):
@@ -222,3 +223,6 @@ class Message:
 
         if name == 'questions':
             self.header.question_count = len(self.questions)
+
+        if name == 'answers':
+            self.header.answer_count = len(self.answers)

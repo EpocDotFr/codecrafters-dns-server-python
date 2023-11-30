@@ -14,7 +14,7 @@ class DNSHandler(DatagramRequestHandler):
         response = messages.Message(
             header=messages.Header(
                 packet_id=query.header.packet_id,
-                message_type=messages.MessageType.Response,
+                message_type=messages.MessageType.R,
                 operation_code=0,
                 authoritative_answer=False,
                 truncated_message=False,
@@ -29,7 +29,8 @@ class DNSHandler(DatagramRequestHandler):
                     record_type=query.questions[0].record_type,
                     record_class=query.questions[0].record_class
                 )
-            ]
+            ],
+            answers=[] # TODO
         )
 
         print('>', response)
