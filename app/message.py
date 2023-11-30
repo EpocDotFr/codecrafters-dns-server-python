@@ -201,6 +201,9 @@ class Message:
     def serialize(self, f: BinaryIO) -> None:
         self.header.serialize(f)
 
+        for question in self.questions:
+            question.serialize(f)
+
     @classmethod
     def unserialize(cls, f: BinaryIO):
         header = Header.unserialize(f)
