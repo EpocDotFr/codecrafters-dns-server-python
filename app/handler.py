@@ -14,7 +14,7 @@ class DNSHandler(DatagramRequestHandler):
         response = messages.Message(
             header=messages.Header(
                 packet_id=query.header.packet_id,
-                query_response=True,
+                message_type=messages.MessageType.Response,
                 operation_code=0,
                 authoritative_answer=False,
                 truncated_message=False,

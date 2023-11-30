@@ -1,6 +1,38 @@
 from typing import BinaryIO, Tuple
 from dataclasses import dataclass
+from enum import Enum
 import struct
+
+
+class MessageType(Enum):
+    Query = '0'
+    Response = '1'
+
+
+class RecordType(Enum):
+    A = 1
+    NS = 2
+    MD = 3
+    MF = 4
+    CNAME = 5
+    SOA = 6
+    MB = 7
+    MG = 8
+    MR = 9
+    NULL = 10
+    WKS = 11
+    PTR = 12
+    HINFO = 13
+    MINFO = 14
+    MX = 15
+    TXT = 16
+
+
+class RecordClass(Enum):
+    IN = 1
+    CS = 2
+    CH = 3
+    HS = 4
 
 
 class HasStructMixin:
@@ -21,7 +53,7 @@ class HasStructMixin:
 @dataclass
 class Header(HasStructMixin):
     packet_id: int
-    query_response: bool
+    message_type: MessageType
     operation_code: int
     authoritative_answer: bool
     truncated_message: bool
@@ -39,7 +71,7 @@ class Header(HasStructMixin):
     def serialize(self, f: BinaryIO) -> None:
         bits = ''
 
-        bits += '1' if self.query_response else '0'
+        bits += self.message_type.value
         bits += format(self.operation_code, '04b')
         bits += '1' if self.authoritative_answer else '0'
         bits += '1' if self.truncated_message else '0'
@@ -67,7 +99,7 @@ class Header(HasStructMixin):
 
         return cls(
             packet_id=packet_id,
-            query_response=bits[0] == '1',
+            message_type=MessageType(bits[0]),
             operation_code=int(bits[1::4], 2),
             authoritative_answer=bits[6] == '1',
             truncated_message=bits[7] == '1',
@@ -84,12 +116,20 @@ class Header(HasStructMixin):
 
 @dataclass
 class Question(HasStructMixin):
+    domain_name: Tuple[str]
+    record_type: RecordType
+    record_class: RecordClass
+
     def serialize(self, f: BinaryIO) -> None:
         pass
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
-        return cls()
+        return cls(
+            domain_name=('',),
+            record_type=RecordType.NS,
+            record_class=RecordClass.IN
+        )
 
 
 @dataclass
