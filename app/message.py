@@ -1,5 +1,5 @@
 from typing import BinaryIO, Tuple, Any
-from app.utils import bytes_to_bits
+from app.utils import byte_to_bits
 from dataclasses import dataclass
 import struct
 
@@ -51,7 +51,7 @@ class Header(HasStructMixin):
     def unserialize(cls, f: BinaryIO):
         packet_id, bits, question_count, answer_count, authority_count, additional_count = cls.unpack(f.read(cls.size()))
 
-        bits = bytes_to_bits(bits)
+        bits = ''.join([byte_to_bits(b) for b in bits])
 
         print(bits)
 
