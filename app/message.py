@@ -61,10 +61,10 @@ class Header(HasStructMixin):
     recursion_available: bool
     reserved: int
     response_code: int
-    question_count: int
-    answer_count: int
-    authority_count: int
-    additional_count: int
+    question_count: int = 0
+    answer_count: int = 0
+    authority_count: int = 0
+    additional_count: int = 0
 
     _format = 'H2sHHHH'
 
@@ -124,7 +124,7 @@ class Question(HasStructMixin):
 
     def serialize(self, f: BinaryIO) -> None:
         f.write(b''.join([
-            len(label).to_bytes(2) + label.encode() for label in self.domain_name
+            len(label).to_bytes(1, byteorder='big') + label.encode() for label in self.domain_name
         ]) + b'\x00')
 
         f.write(self.pack(
@@ -216,3 +216,9 @@ class Message:
             header=header,
             questions=questions
         )
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+
+        if name == 'questions':
+            self.header.question_count = len(self.questions)
