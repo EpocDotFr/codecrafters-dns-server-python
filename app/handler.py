@@ -30,7 +30,15 @@ class DNSHandler(DatagramRequestHandler):
                     record_class=query.questions[0].record_class
                 )
             ],
-            answers=[] # TODO
+            answers=[
+                messages.Answer(
+                    domain_name=query.questions[0].domain_name,
+                    record_type=query.questions[0].record_type,
+                    record_class=query.questions[0].record_class,
+                    ttl=60,
+                    data='8.8.8.8'
+                )
+            ]
         )
 
         print('>', response)

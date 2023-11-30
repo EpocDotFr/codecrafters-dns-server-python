@@ -1,7 +1,32 @@
-from typing import BinaryIO, Tuple, List
+from typing import BinaryIO, Tuple, List, Any
+from socket import inet_aton, inet_ntoa
 from dataclasses import dataclass
 from enum import Enum
 import struct
+
+
+def serialize_domain_name(f: BinaryIO, domain_name: List[str]) -> None:
+    f.write(b''.join([
+        len(label).to_bytes(1, byteorder='big') + label.encode() for label in domain_name
+    ]) + b'\x00')
+
+
+def unserialize_domain_name(f: BinaryIO) -> List[str]:
+    ret = []
+
+    while True:
+        char = f.read(1)
+
+        if char == b'\x00':
+            break
+
+        label = f.read(
+            int.from_bytes(char, byteorder='big')
+        ).decode()
+
+        ret.append(label)
+
+    return ret
 
 
 class MessageType(Enum):
@@ -26,6 +51,10 @@ class RecordType(Enum):
     MINFO = 14
     MX = 15
     TXT = 16
+    AXFR = 252
+    MAILB = 253
+    MAILA = 254
+    STAR = 255
 
 
 class RecordClass(Enum):
@@ -33,13 +62,14 @@ class RecordClass(Enum):
     CS = 2
     CH = 3
     HS = 4
+    STAR = 255
 
 
 class HasStructMixin:
     _format: str
 
-    def pack(self, *data) -> bytes:
-        return struct.pack(f'>{self._format}', *data)
+    def pack(self, f: BinaryIO, *data) -> None:
+        f.write(struct.pack(f'>{self._format}', *data))
 
     @classmethod
     def unpack(cls, f: BinaryIO) -> Tuple:
@@ -82,14 +112,15 @@ class Header(HasStructMixin):
 
         bits = int(bits, 2).to_bytes(2, byteorder='big')
 
-        f.write(self.pack(
+        self.pack(
+            f,
             self.packet_id,
             bits,
             self.question_count,
             self.answer_count,
             self.authority_count,
             self.additional_count
-        ))
+        )
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
@@ -123,30 +154,17 @@ class Question(HasStructMixin):
     _format = 'HH'
 
     def serialize(self, f: BinaryIO) -> None:
-        f.write(b''.join([
-            len(label).to_bytes(1, byteorder='big') + label.encode() for label in self.domain_name
-        ]) + b'\x00')
+        serialize_domain_name(f, self.domain_name)
 
-        f.write(self.pack(
+        self.pack(
+            f,
             self.record_type.value,
             self.record_class.value
-        ))
+        )
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
-        domain_name = []
-
-        while True:
-            char = f.read(1)
-
-            if char == b'\x00':
-                break
-
-            label = f.read(
-                int.from_bytes(char, byteorder='big')
-            ).decode()
-
-            domain_name.append(label)
+        domain_name = unserialize_domain_name(f)
 
         record_type, record_class = cls.unpack(f)
 
@@ -162,12 +180,55 @@ class Question(HasStructMixin):
 
 @dataclass
 class Answer(HasStructMixin):
+    domain_name: List[str]
+    record_type: RecordType
+    record_class: RecordClass
+    ttl: int
+    data: Any
+
+    _format = 'HHIH'
+
     def serialize(self, f: BinaryIO) -> None:
-        pass
+        serialize_domain_name(f, self.domain_name)
+
+        if self.record_type == RecordType.A:
+            raw_data = inet_aton(self.data)
+        else:
+            raise NotImplementedError(f'Not implemented for record type {self.record_type}')
+
+        self.pack(
+            f,
+            self.record_type.value,
+            self.record_class.value,
+            self.ttl,
+            len(raw_data)
+        )
+
+        f.write(raw_data)
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
-        return cls()
+        domain_name = unserialize_domain_name(f)
+
+        record_type, record_class, ttl, raw_data_length = cls.unpack(f)
+
+        record_type = RecordType(record_type)
+        record_class = RecordClass(record_class)
+
+        raw_data = f.read(raw_data_length)
+
+        if record_type == RecordType.A:
+            data = inet_ntoa(raw_data)
+        else:
+            raise NotImplementedError(f'Not implemented for record type {record_type}')
+
+        return cls(
+            domain_name=domain_name,
+            record_type=record_type,
+            record_class=record_class,
+            ttl=ttl,
+            data=data
+        )
 
 
 @dataclass
@@ -204,6 +265,9 @@ class Message:
         for question in self.questions:
             question.serialize(f)
 
+        for answer in self.answers:
+            answer.serialize(f)
+
     @classmethod
     def unserialize(cls, f: BinaryIO):
         header = Header.unserialize(f)
@@ -212,10 +276,14 @@ class Message:
             Question.unserialize(f) for _ in range(header.question_count)
         ]
 
+        answers = [
+            Answer.unserialize(f) for _ in range(header.answer_count)
+        ]
+
         return cls(
             header=header,
             questions=questions,
-            answers=[] # TODO
+            answers=answers
         )
 
     def __setattr__(self, name, value):
@@ -223,6 +291,5 @@ class Message:
 
         if name == 'questions':
             self.header.question_count = len(self.questions)
-
-        if name == 'answers':
+        elif name == 'answers':
             self.header.answer_count = len(self.answers)
