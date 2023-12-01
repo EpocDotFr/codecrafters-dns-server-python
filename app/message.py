@@ -13,25 +13,37 @@ def serialize_domain_name(f: BinaryIO, domain_name: List[str]) -> None:
 
 def unserialize_domain_name(f: BinaryIO) -> List[str]:
     ret = []
+    old_pos = None
 
     while True:
         char = f.read(1)
 
         if char == b'\x00':
-            break
+            if old_pos:
+                f.seek(old_pos)
+
+                print('old_pos', old_pos)
+
+                old_pos = None
+            else:
+                break
 
         label_length = int.from_bytes(char, byteorder='big')
         label_length_bits = format(label_length, '08b')
 
-        if label_length_bits[:2] == '11': # Pointer
+        if not old_pos and label_length_bits[:2] == '11': # Compressed label
             pointer_pos_bits = label_length_bits[2:] + format(int.from_bytes(f.read(1), byteorder='big'), '08b')
             pointer_pos = int(pointer_pos_bits, 2)
 
-            print(pointer_pos)
+            print('pointer_pos', pointer_pos)
 
-        label = f.read(label_length).decode()
+            old_pos = f.tell()
 
-        ret.append(label)
+            f.seek(pointer_pos)
+        else:
+            label = f.read(label_length).decode()
+
+            ret.append(label)
 
     return ret
 
