@@ -21,7 +21,7 @@ class DNSHandler(DatagramRequestHandler):
                 recursion_desired=query.header.recursion_desired,
                 recursion_available=False,
                 reserved=0,
-                response_code=0 if query.header.operation_code == 0 else 4,
+                response_code=messages.ResponseCode.NO_ERROR if query.header.operation_code == 0 else messages.ResponseCode.NOT_IMP,
             ),
             questions=[
                 messages.Question(
@@ -31,14 +31,16 @@ class DNSHandler(DatagramRequestHandler):
                 )
             ],
             answers=[
-                messages.Answer(
+                messages.Record(
                     domain_name=query.questions[0].domain_name,
                     record_type=messages.RecordType.A,
                     record_class=messages.RecordClass.IN,
                     ttl=60,
                     data='8.8.8.8'
                 )
-            ]
+            ],
+            authorities=[],
+            additional=[]
         )
 
         print('>', response)
