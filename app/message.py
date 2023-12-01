@@ -1,6 +1,6 @@
 from typing import BinaryIO, Tuple, List, Any
+from dataclasses import dataclass, field
 from socket import inet_aton, inet_ntoa
-from dataclasses import dataclass
 from enum import Enum
 import struct
 
@@ -91,12 +91,8 @@ class Header(HasStructMixin):
     recursion_available: bool
     reserved: int
     response_code: int
-    question_count: int = 0
-    answer_count: int = 0
-    authority_count: int = 0
-    additional_count: int = 0
 
-    _format = 'H2sHHHH'
+    _format = 'H2s'
 
     def serialize(self, f: BinaryIO) -> None:
         bits = ''
@@ -115,16 +111,12 @@ class Header(HasStructMixin):
         self.pack(
             f,
             self.packet_id,
-            bits,
-            self.question_count,
-            self.answer_count,
-            self.authority_count,
-            self.additional_count
+            bits
         )
 
     @classmethod
     def unserialize(cls, f: BinaryIO):
-        packet_id, bits, question_count, answer_count, authority_count, additional_count = cls.unpack(f)
+        packet_id, bits = cls.unpack(f)
 
         bits = ''.join([format(b, '08b') for b in bits])
 
@@ -137,11 +129,7 @@ class Header(HasStructMixin):
             recursion_desired=bits[8] == '1',
             recursion_available=bits[9] == '1',
             reserved=int(bits[10::3], 2),
-            response_code=int(bits[14::4], 2),
-            question_count=question_count,
-            answer_count=answer_count,
-            authority_count=authority_count,
-            additional_count=additional_count
+            response_code=int(bits[14::4], 2)
         )
 
 
@@ -252,15 +240,25 @@ class Additional(HasStructMixin):
 
 
 @dataclass
-class Message:
+class Message(HasStructMixin):
     header: Header
     questions: List[Question]
     answers: List[Answer]
-    # authorities: List[Authority]
-    # additional: List[Additional]
+    authorities: List[Authority] = field(default_factory=list) # TODO
+    additional: List[Additional] = field(default_factory=list) # TODO
+
+    _format = 'HHHH'
 
     def serialize(self, f: BinaryIO) -> None:
         self.header.serialize(f)
+
+        self.pack(
+            f,
+            len(self.questions),
+            len(self.answers),
+            len(self.authorities),
+            len(self.additional),
+        )
 
         for question in self.questions:
             question.serialize(f)
@@ -272,12 +270,14 @@ class Message:
     def unserialize(cls, f: BinaryIO):
         header = Header.unserialize(f)
 
+        question_count, answer_count, authority_count, additional_count = cls.unpack(f)
+
         questions = [
-            Question.unserialize(f) for _ in range(header.question_count)
+            Question.unserialize(f) for _ in range(question_count)
         ]
 
         answers = [
-            Answer.unserialize(f) for _ in range(header.answer_count)
+            Answer.unserialize(f) for _ in range(answer_count)
         ]
 
         return cls(
@@ -285,11 +285,3 @@ class Message:
             questions=questions,
             answers=answers
         )
-
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-
-        if name == 'questions':
-            self.header.question_count = len(self.questions)
-        elif name == 'answers':
-            self.header.answer_count = len(self.answers)

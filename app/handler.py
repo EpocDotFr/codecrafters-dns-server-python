@@ -15,13 +15,13 @@ class DNSHandler(DatagramRequestHandler):
             header=messages.Header(
                 packet_id=query.header.packet_id,
                 message_type=messages.MessageType.R,
-                operation_code=0,
+                operation_code=query.header.operation_code,
                 authoritative_answer=False,
                 truncated_message=False,
-                recursion_desired=False,
+                recursion_desired=query.header.recursion_desired,
                 recursion_available=False,
                 reserved=0,
-                response_code=0,
+                response_code=0 if query.header.operation_code == 0 else 4,
             ),
             questions=[
                 messages.Question(
