@@ -106,12 +106,10 @@ class Header(HasStructMixin):
         bits += format(self.reserved, '03b')
         bits += format(self.response_code, '04b')
 
-        bits = int(bits, 2).to_bytes(2, byteorder='big')
-
         self.pack(
             f,
             self.packet_id,
-            bits
+            int(bits, 2).to_bytes(2, byteorder='big')
         )
 
     @classmethod
@@ -119,6 +117,8 @@ class Header(HasStructMixin):
         packet_id, bits = cls.unpack(f)
 
         bits = ''.join([format(b, '08b') for b in bits])
+
+        print(bits)
 
         return cls(
             packet_id=packet_id,
@@ -182,7 +182,7 @@ class Answer(HasStructMixin):
         if self.record_type == RecordType.A:
             raw_data = inet_aton(self.data)
         else:
-            raise NotImplementedError(f'Not implemented for record type {self.record_type}')
+            raise NotImplementedError(f'Answer serialization Not implemented for record type {self.record_type.name}')
 
         self.pack(
             f,
@@ -208,7 +208,7 @@ class Answer(HasStructMixin):
         if record_type == RecordType.A:
             data = inet_ntoa(raw_data)
         else:
-            raise NotImplementedError(f'Not implemented for record type {record_type}')
+            raise NotImplementedError(f'Answer unserialization not implemented for record type {record_type.name}')
 
         return cls(
             domain_name=domain_name,
@@ -257,7 +257,7 @@ class Message(HasStructMixin):
             len(self.questions),
             len(self.answers),
             len(self.authorities),
-            len(self.additional),
+            len(self.additional)
         )
 
         for question in self.questions:
