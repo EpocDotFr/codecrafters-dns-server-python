@@ -118,18 +118,16 @@ class Header(HasStructMixin):
 
         bits = ''.join([format(b, '08b') for b in bits])
 
-        print(bits)
-
         return cls(
             packet_id=packet_id,
             message_type=MessageType(bits[0]),
-            operation_code=int(bits[1::4], 2),
-            authoritative_answer=bits[6] == '1',
-            truncated_message=bits[7] == '1',
-            recursion_desired=bits[8] == '1',
-            recursion_available=bits[9] == '1',
-            reserved=int(bits[10::3], 2),
-            response_code=int(bits[14::4], 2)
+            operation_code=int(bits[1:5], 2),
+            authoritative_answer=bits[5] == '1',
+            truncated_message=bits[6] == '1',
+            recursion_desired=bits[7] == '1',
+            recursion_available=bits[8] == '1',
+            reserved=int(bits[9:12], 2),
+            response_code=int(bits[12:], 2)
         )
 
 
