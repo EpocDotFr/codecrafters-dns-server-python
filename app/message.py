@@ -19,16 +19,7 @@ def unserialize_domain_name(f: BinaryIO) -> List[str]:
         char = f.read(1)
 
         if char == b'\x00':
-            if old_pos:
-                f.seek(old_pos)
-
-                print('old_pos', old_pos)
-
-                old_pos = None
-
-                continue
-            else:
-                break
+            break
 
         label_length = int.from_bytes(char, byteorder='big')
         label_length_bits = format(label_length, '08b')
