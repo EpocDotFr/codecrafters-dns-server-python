@@ -20,9 +20,16 @@ def unserialize_domain_name(f: BinaryIO) -> List[str]:
         if char == b'\x00':
             break
 
-        label = f.read(
-            int.from_bytes(char, byteorder='big')
-        ).decode()
+        label_length = int.from_bytes(char, byteorder='big')
+        label_length_bits = format(label_length, '08b')
+
+        if label_length_bits[:2] == '11': # Pointer
+            pointer_pos_bits = label_length_bits[2:] + format(int.from_bytes(f.read(1), byteorder='big'), '08b')
+            pointer_pos = int(pointer_pos_bits, 2)
+
+            print(pointer_pos)
+
+        label = f.read(label_length).decode()
 
         ret.append(label)
 
