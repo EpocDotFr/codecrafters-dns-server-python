@@ -133,6 +133,7 @@ class RecordClass(enum.Enum):
     HS = 4
     NONE = 254
     STAR = 255
+    EDNS = 4096
 
 
 @enum.unique
