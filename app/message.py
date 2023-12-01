@@ -25,6 +25,8 @@ def unserialize_domain_name(f: BinaryIO) -> List[str]:
                 print('old_pos', old_pos)
 
                 old_pos = None
+
+                continue
             else:
                 break
 
