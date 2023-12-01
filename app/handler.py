@@ -26,15 +26,15 @@ class DNSHandler(DatagramRequestHandler):
             questions=[
                 messages.Question(
                     domain_name=query.questions[0].domain_name,
-                    record_type=query.questions[0].record_type,
-                    record_class=query.questions[0].record_class
+                    record_type=messages.RecordType.A,
+                    record_class=messages.RecordClass.IN
                 )
             ],
             answers=[
                 messages.Answer(
                     domain_name=query.questions[0].domain_name,
-                    record_type=query.questions[0].record_type,
-                    record_class=query.questions[0].record_class,
+                    record_type=messages.RecordType.A,
+                    record_class=messages.RecordClass.IN,
                     ttl=60,
                     data='8.8.8.8'
                 )
